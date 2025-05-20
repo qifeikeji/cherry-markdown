@@ -53,9 +53,12 @@ jobs:
         cp -r packages/client/src-tauri/target/release/* dist/
         cd dist
         zip -r ../cherry-markdown-release.zip .
+        ls -la ../cherry-markdown-release.zip
         
     - name: Upload Release Package
       uses: actions/upload-artifact@v4
       with:
         name: cherry-markdown-release
-        path: cherry-markdown-release.zip 
+        path: ${{ github.workspace }}/cherry-markdown-release.zip
+        retention-days: 5
+        if-no-files-found: error 
