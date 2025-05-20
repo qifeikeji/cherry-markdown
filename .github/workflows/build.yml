@@ -1,34 +1,64 @@
-# This workflow will do a clean install of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
-
-name: Package Build
+name: Build and Package
 
 on:
   push:
-    branches: [main, dev]
+    branches: 
+      - main
+      - master
   pull_request:
-    branches: [main, dev]
+    branches: 
+      - main
+      - master
+  workflow_dispatch:
+  repository_dispatch:
+    types: [build_request]
+
+permissions:
+  contents: write
+  packages: write
 
 jobs:
-  build:
+  build-and-package:
+    name: Build and Package
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x, lts/*]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
+    
     steps:
-      - uses: actions/checkout@v4
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'yarn'
-      - name: Install dependencies
-        run: |
-          yarn install
-      - name: Eslint
-        run: yarn lint:cherry-markdown:ci
-      - name: Build
-        run: yarn build
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'yarn'
+        
+    - name: Install Yarn
+      run: npm install -g yarn@1.22.22
+      
+    - name: Install Dependencies
+      run: yarn install --frozen-lockfile
+      
+    - name: Build Project
+      run: yarn build
+      
+    - name: Build Client
+      run: yarn build:client
+      
+    - name: Create Release Package
+      run: |
+        mkdir -p dist
+        cp -r packages/cherry-markdown/dist/* dist/
+        cp -r packages/client/src-tauri/target/release/* dist/
+        cd dist
+        zip -r ../cherry-markdown-release.zip .
+        ls -la ../cherry-markdown-release.zip
+        
+    - name: Upload Release Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: cherry-markdown-release
+        path: ${{ github.workspace }}/cherry-markdown-release.zip
+        retention-days: 5
+        if-no-files-found: error 
