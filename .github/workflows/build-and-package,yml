@@ -1,0 +1,44 @@
+name: Build and Package
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-package:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Install Yarn
+      run: npm install -g yarn@1.22.22
+      
+    - name: Install Dependencies
+      run: yarn install
+      
+    - name: Build Project
+      run: yarn build
+      
+    - name: Build Client
+      run: yarn build:client
+      
+    - name: Create Release Package
+      run: |
+        mkdir -p dist
+        cp -r packages/cherry-markdown/dist/* dist/
+        cp -r packages/client/src-tauri/target/release/* dist/
+        cd dist
+        zip -r ../cherry-markdown-release.zip .
+        
+    - name: Upload Release Package
+      uses: actions/upload-artifact@v3
+      with:
+        name: cherry-markdown-release
+        path: cherry-markdown-release.zip 
